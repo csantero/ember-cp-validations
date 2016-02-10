@@ -81,14 +81,9 @@ export default function buildValidations(validations = {}) {
   const Validations = createValidationsObject(validations);
 
   return Ember.Mixin.create({
-    validations: null,
-
-    init() {
-      this._super(...arguments);
-      this.set('validations', Validations.create({
-        model: this,
-      }));
-    },
+    validations: computed(function() {
+      return Validations.create({ model: this });
+    }).readOnly(),
     validate() {
       return get(this, 'validations').validate(...arguments);
     },
@@ -157,16 +152,15 @@ function createValidationsObject(validations = {}) {
 
     init() {
       this._super(...arguments);
-      let inheritedValidations = this.get('model.validations');
-      let validatableAttributes = emberArray(Object.keys(validations));
+      let inheritedValidations = this.get('model')._super();
       let validationRules = validations;
       let attrs = {};
 
       if(inheritedValidations) {
-        validatableAttributes = validatableAttributes.pushObjects(getWithDefault(inheritedValidations, '_validatableAttributes', [])).uniq();
         validationRules = merge(merge({}, inheritedValidations.get('_validationRules')), validationRules);
       }
 
+      let validatableAttributes = Object.keys(validationRules);
       validatableAttributes.forEach((attribute) => {
         attrs[attribute] = createCPValidationFor(attribute, validationRules[attribute]);
       });
