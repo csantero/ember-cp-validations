@@ -176,67 +176,7 @@ function createValidationsObject(validations = {}) {
         })
       });
 
-      this.createValidationProperies();
-    },
-
-    /**
-     * Create the global properties under the validations object.
-     * These are computed collections on different properties of each attribute validations CP
-     * @method createValidationProperies
-     * @private
-     */
-    createValidationProperies() {
-      const validatableAttrs = this.get('_validatableAttributes');
-      this.setProperties({
-        isValid: and(...validatableAttrs.map((attr) => `attrs.${attr}.isValid`)).readOnly(),
-        isValidating: or(...validatableAttrs.map((attr) => `attrs.${attr}.isValidating`)).readOnly(),
-        isDirty: or(...validatableAttrs.map((attr) => `attrs.${attr}.isDirty`)).readOnly(),
-        isAsync: or(...validatableAttrs.map((attr) => `attrs.${attr}.isAsync`)).readOnly(),
-        isNotValidating: not('isValidating').readOnly(),
-        isInvalid: not('isValid').readOnly(),
-        isTruelyValid: and('isValid', 'isNotValidating').readOnly(),
-
-        messages: computed(...validatableAttrs.map((attr) => `attrs.${attr}.messages`), function() {
-          var messages = [];
-          validatableAttrs.forEach((attr) => {
-            var validation = get(this, `attrs.${attr}`);
-            if (validation) {
-              messages.push(get(validation, 'messages'));
-            }
-          });
-          return emberArray(flatten(messages)).compact();
-        }),
-
-        message: computed('messages.[]', cycleBreaker(function() {
-          return get(this, 'messages.0');
-        })),
-
-        errors: computed(...validatableAttrs.map((attr) => `attrs.${attr}.@each.errors`), function() {
-          var errors = [];
-          validatableAttrs.forEach((attr) => {
-            var validation = get(this, `attrs.${attr}`);
-            if (validation) {
-              errors.push(get(validation, 'errors'));
-            }
-          });
-          return emberArray(flatten(errors)).compact();
-        }),
-
-        error: computed('errors.[]', cycleBreaker(function() {
-          return get(this, 'errors.0');
-        })),
-
-        _promise: computed(...validatableAttrs.map((attr) => `attrs.${attr}._promise`), function() {
-          var promises = [];
-          validatableAttrs.forEach((attr) => {
-            var validation = get(this, `attrs.${attr}`);
-            if (get(validation, 'isAsync')) {
-              promises.push(get(validation, '_promise'));
-            }
-          });
-          return RSVP.all(flatten(promises));
-        })
-      });
+      createGlobalValidationProps(this);
     }
   });
 }
@@ -280,6 +220,67 @@ function createCPValidationFor(attribute, validations) {
       attribute, content: flatten(validationResults)
     });
   }));
+}
+
+/**
+ * Create the global properties under the validations object.
+ * These are computed collections on different properties of each attribute validations CP
+ * @method createGlobalValidationProps
+ * @private
+ * @param  {Object} validations
+ */
+function createGlobalValidationProps(validations) {
+  const validatableAttrs = validations.get('_validatableAttributes');
+  validations.setProperties({
+    isValid: and(...validatableAttrs.map((attr) => `attrs.${attr}.isValid`)).readOnly(),
+    isValidating: or(...validatableAttrs.map((attr) => `attrs.${attr}.isValidating`)).readOnly(),
+    isDirty: or(...validatableAttrs.map((attr) => `attrs.${attr}.isDirty`)).readOnly(),
+    isAsync: or(...validatableAttrs.map((attr) => `attrs.${attr}.isAsync`)).readOnly(),
+    isNotValidating: not('isValidating').readOnly(),
+    isInvalid: not('isValid').readOnly(),
+    isTruelyValid: and('isValid', 'isNotValidating').readOnly(),
+
+    messages: computed(...validatableAttrs.map((attr) => `attrs.${attr}.messages`), function() {
+      var messages = [];
+      validatableAttrs.forEach((attr) => {
+        var validation = get(this, `attrs.${attr}`);
+        if (validation) {
+          messages.push(get(validation, 'messages'));
+        }
+      });
+      return emberArray(flatten(messages)).compact();
+    }),
+
+    message: computed('messages.[]', cycleBreaker(function() {
+      return get(this, 'messages.0');
+    })),
+
+    errors: computed(...validatableAttrs.map((attr) => `attrs.${attr}.@each.errors`), function() {
+      var errors = [];
+      validatableAttrs.forEach((attr) => {
+        var validation = get(this, `attrs.${attr}`);
+        if (validation) {
+          errors.push(get(validation, 'errors'));
+        }
+      });
+      return emberArray(flatten(errors)).compact();
+    }),
+
+    error: computed('errors.[]', cycleBreaker(function() {
+      return get(this, 'errors.0');
+    })),
+
+    _promise: computed(...validatableAttrs.map((attr) => `attrs.${attr}._promise`), function() {
+      var promises = [];
+      validatableAttrs.forEach((attr) => {
+        var validation = get(this, `attrs.${attr}`);
+        if (get(validation, 'isAsync')) {
+          promises.push(get(validation, '_promise'));
+        }
+      });
+      return RSVP.all(flatten(promises));
+    })
+  });
 }
 
 /**
