@@ -144,10 +144,13 @@ function createValidationsObject(validations = {}) {
     attrs: null,
     isValidations: true,
 
+    // Caches
     _validators: {},
     _debouncedValidations: {},
-    _validatableAttributes: [],
-    _validationRules: {},
+
+    // Private
+    _validationRules: null,
+    _validatableAttributes: null,
 
     validate,
     validateSync,
@@ -155,12 +158,12 @@ function createValidationsObject(validations = {}) {
     init() {
       this._super(...arguments);
       let inheritedValidations = this.get('model.validations');
-      let validatableAttributes = Object.keys(validations);
+      let validatableAttributes = emberArray(Object.keys(validations));
       let validationRules = validations;
       let attrs = {};
 
       if(inheritedValidations) {
-        validatableAttributes = emberArray(validatableAttributes.concat(getWithDefault(inheritedValidations, '_validatableAttributes', []))).uniq();
+        validatableAttributes = validatableAttributes.pushObjects(getWithDefault(inheritedValidations, '_validatableAttributes', [])).uniq();
         validationRules = merge(merge({}, inheritedValidations.get('_validationRules')), validationRules);
       }
 
@@ -241,14 +244,7 @@ function createGlobalValidationProps(validations) {
     isTruelyValid: and('isValid', 'isNotValidating').readOnly(),
 
     messages: computed(...validatableAttrs.map((attr) => `attrs.${attr}.messages`), function() {
-      var messages = [];
-      validatableAttrs.forEach((attr) => {
-        var validation = get(this, `attrs.${attr}`);
-        if (validation) {
-          messages.push(get(validation, 'messages'));
-        }
-      });
-      return emberArray(flatten(messages)).compact();
+      return emberArray(flatten(validatableAttrs.map(attr => get(this, `attrs.${attr}.messages`)))).compact();
     }),
 
     message: computed('messages.[]', cycleBreaker(function() {
@@ -256,14 +252,7 @@ function createGlobalValidationProps(validations) {
     })),
 
     errors: computed(...validatableAttrs.map((attr) => `attrs.${attr}.@each.errors`), function() {
-      var errors = [];
-      validatableAttrs.forEach((attr) => {
-        var validation = get(this, `attrs.${attr}`);
-        if (validation) {
-          errors.push(get(validation, 'errors'));
-        }
-      });
-      return emberArray(flatten(errors)).compact();
+      return emberArray(flatten(validatableAttrs.map(attr => get(this, `attrs.${attr}.errors`)))).compact();
     }),
 
     error: computed('errors.[]', cycleBreaker(function() {
@@ -278,7 +267,7 @@ function createGlobalValidationProps(validations) {
           promises.push(get(validation, '_promise'));
         }
       });
-      return RSVP.all(flatten(promises));
+      return RSVP.Promise.all(flatten(promises));
     })
   });
 }
