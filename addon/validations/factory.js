@@ -152,7 +152,7 @@ function createValidationsObject(validations = {}) {
 
     init() {
       this._super(...arguments);
-      let inheritedValidations = this.get('model')._super();
+      let inheritedValidations = this.get('model').constructor.superclass.prototype.get('validations');
       let validationRules = validations;
       let attrs = {};
 
